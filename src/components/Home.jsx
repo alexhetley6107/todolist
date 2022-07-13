@@ -1,48 +1,94 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react';
+import axios from 'axios';
+import { ThreeDots } from 'react-loader-spinner';
 import AddField from './AddField/AddField';
-import ToDoItem from './Item/ToDoItem'
-
-const data =[
-  {id:'dasfvgswv', title:'Купить бананы', isCompleted: true},
-  {id:'jgyulii,i.', title:'Вынести мусор', isCompleted: false},
-  {id:'dvsrvsdrfr', title:'Забрать посылку', isCompleted: false},
-];
+import ToDoItem from './Item/ToDoItem';
 
 function Home() {
+	const [todos, setTodos] = useState([]);
+	const [loading, setLoading] = useState(true);
 
-  const [todos, setTodos] = useState(data);
+	const changeToDo = async (id) => {
+		try {
+			setLoading(true);
 
-  const changeToDo = (id) => {
-    setTodos(todos.map(todo => todo.id === id 
-      ? {...todo, isCompleted : !todo.isCompleted} 
-      : todo));
-  }
-  const removeToDo = (id) => {
-    setTodos(todos.filter(todo => todo.id !== id ));
-  }
-  const addToDo = (title) => {
-    setTodos([
-      {id:new Date(), title, isCompleted: false},
-       ...todos]);
-  }
-  
-  return (
-    <div className=' text-white md:w-3/5 w-full mx-auto'>
-        <h1 className='font-bold text-4xl text-center mb-9'>To Do List</h1>
-        <AddField addToDo={addToDo}/>
-        { todos.length > 0
-        ?
-        todos.map(todo => 
-          <ToDoItem todo={todo} key={todo.id} 
-            change={changeToDo}
-            remove={removeToDo}
-          />)
-        :
-        <h2 className='font-bold text-2xl text-center'>No Tasks</h2>
-        
-        }
-    </div>
-  )
+			const todo = todos.filter((todo) => todo.id === id);
+			todo.isCompleted = !todo.isCompleted;
+
+			setTodos(
+				todos.map((todo) => (todo.id === id ? { ...todo, isCompleted: !todo.isCompleted } : todo)),
+			);
+
+			await axios.put(`https://62ce6167826a88972dfa8395.mockapi.io/todos/${id}`, {
+				isCompleted: true,
+			});
+			setLoading(false);
+		} catch (err) {
+			alert('Ошибка задания');
+			console.error(err);
+		}
+	};
+
+	const removeToDo = async (id) => {
+		try {
+			setLoading(true);
+			setTodos(todos.filter((todo) => todo.id !== id));
+			await axios.delete(`https://62ce6167826a88972dfa8395.mockapi.io/todos/${id}`);
+			setLoading(false);
+		} catch (err) {
+			alert('Ошибка при удалении задания');
+			console.error(err);
+		}
+	};
+
+	const addToDo = async (title) => {
+		try {
+			setLoading(true);
+			const todoBody = { title, isCompleted: false };
+			//crutch for mockapi, to get mockapi ID for each todo
+			await axios.post(`https://62ce6167826a88972dfa8395.mockapi.io/todos/`, todoBody);
+			const { data } = await axios.get(`https://62ce6167826a88972dfa8395.mockapi.io/todos`);
+			//todo returns with id prop
+			const todo = data[data.length - 1];
+			setTodos([todo, ...todos]);
+			setLoading(false);
+		} catch (err) {
+			alert('Ошибка при добавлении задания');
+			console.error(err);
+		}
+	};
+
+	useEffect(() => {
+		async function fetchData() {
+			try {
+				const { data } = await axios.get(`https://62ce6167826a88972dfa8395.mockapi.io/todos`);
+				setTodos(data.reverse());
+				setLoading(false);
+			} catch (error) {
+				alert('Oшибка при запросе данных');
+				console.error(error);
+			}
+		}
+
+		fetchData();
+	}, []);
+
+	return (
+		<div className=' text-white md:w-3/5 w-full mx-auto'>
+			<h1 className='font-bold text-4xl text-center mb-9'>To Do List</h1>
+			<AddField addToDo={addToDo} />
+			<div className='w-full h-7 p-2'>
+				{loading && <ThreeDots height='15' width='2000' color='white' ariaLabel='loading' />}
+			</div>
+			{todos.length > 0 ? (
+				todos.map((todo) => (
+					<ToDoItem todo={todo} key={todo.id} change={changeToDo} remove={removeToDo} />
+				))
+			) : (
+				<>{!loading && <h2 className='font-bold text-2xl text-center'>No Tasks</h2>}</>
+			)}
+		</div>
+	);
 }
 
-export default Home
+export default Home;
