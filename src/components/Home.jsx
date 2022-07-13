@@ -12,15 +12,14 @@ function Home() {
 		try {
 			setLoading(true);
 
-			const todo = todos.filter((todo) => todo.id === id);
-			todo.isCompleted = !todo.isCompleted;
+			const isCompleted = todos.filter((todo) => todo.id === id)[0].isCompleted;
 
 			setTodos(
 				todos.map((todo) => (todo.id === id ? { ...todo, isCompleted: !todo.isCompleted } : todo)),
 			);
 
 			await axios.put(`https://62ce6167826a88972dfa8395.mockapi.io/todos/${id}`, {
-				isCompleted: true,
+				isCompleted: !isCompleted,
 			});
 			setLoading(false);
 		} catch (err) {
